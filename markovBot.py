@@ -101,7 +101,7 @@ class MarkovBot(object):
                     tweet += " " + w2
                 else:
                     return tweet
-                return tweet
+            return tweet
         else:
             self.getTweets(hashtag)
             return "No tweet data, dictionary updated"
