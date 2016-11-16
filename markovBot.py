@@ -71,7 +71,7 @@ class MarkovBot(object):
             self.words[hashtag] = [word for result in results for word in result.split(" ")]
 
         tweets = [tweet.split(" ") for tweet in results]
-        self.dictionary[hashtag] = {}
+        self.dictionary[hashtag] = {"threes": {}, "pairs": {}}
         self.makeDictionary(tweets, hashtag)
 
     def makeDictionary(self, tweets, hashtag):
@@ -96,10 +96,18 @@ class MarkovBot(object):
         for tweet in threes:    
             for w1, w2, w3 in tweet:
                 key = (w1, w2)
-                if key in self.dictionary[hashtag]:
-                    self.dictionary[hashtag][key].append(w3)
+                if key in self.dictionary[hashtag]["threes"]:
+                    self.dictionary[hashtag]["threes"][key].append(w3)
                 else:
-                    self.dictionary[hashtag][key] = [w3]
+                    self.dictionary[hashtag]["threes"][key] = [w3]
+
+        pairs = [list(zip(a[0:-1], a[1:])) for a in tweets]
+        for tweet in pairs:
+            for w1, w2 in tweet:
+                if w1 in self.dictionary[hashtag]["pairs"]:
+                    self.dictionary[hashtag]["pairs"][w1].append(w2)
+                else:
+                    self.dictionary[hashtag]["pairs"][w1] = [w2]
 
     def markov_tweet(self, hashtag, length=20):
         tweet = ''
@@ -108,11 +116,16 @@ class MarkovBot(object):
             w1, w2 = self.words[hashtag][seed], self.words[hashtag][seed + 1]
             tweet = w1 + " " + w2
             for i in range(0, length):
-                if (w1, w2) in self.dictionary[hashtag]:
-                    w1, w2 = w2, random.choice(self.dictionary[hashtag][(w1, w2)])
-                    tweet += " " + w2
+                if (w1, w2) in self.dictionary[hashtag]["threes"]:
+                    if len(self.dictionary[hashtag]["threes"][(w1, w2)]) == 1:
+                        w1, w2 = w2, random.choice(self.dictionary[hashtag]["threes"][(w1, w2)] + self.dictionary[hashtag]["pairs"][w2])
+                    else:
+                        w1, w2 = w2, random.choice(self.dictionary[hashtag]["threes"][(w1, w2)] + self.dictionary[hashtag]["pairs"][w2])
+                elif w2 in self.dictionary[hashtag]["pairs"]:
+                    w1, w2 = w2, random.choice(self.dictionary[hashtag]["pairs"][w2])
                 else:
                     return tweet
+                tweet += " " + w2
             return tweet
         else:
             self.getTweets(hashtag)
