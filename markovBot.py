@@ -1,6 +1,7 @@
 import sys
 import twitter
 import random
+import math
 from twitterCredentials import consumer_key, consumer_secret, access_token_key, access_token_secret
 
 
@@ -46,11 +47,22 @@ class MarkovBot(object):
         """
             Get tweets from a hashtag and generate markov dictionary and word list
 
-            TODO: API limits tweet queries to returning 100 results. To increase this number, need to create seperate tweet 
-            query function
         """
 
-        results = [results.text for results in self.api.GetSearch(raw_query = "q=%23" + hashtag + "&count=" + str(num))]
+        # Handle getting more than 100 tweets at a time, as this is the limit for a single api call
+        if num >= 100:
+            max_ID = None
+            for i in range(0, math.floor(num / 100)):
+                if max_ID == None:
+                    tweets = self.api.GetSearch(term = "%23" + hashtag, count = 100)
+                else:
+                    tweets = tweets + self.api.GetSearch(term = "%23" + hashtag, max_id = max_ID, count = 100)
+                max_ID = min([status.id for status in tweets]) - 1
+            tweets = tweets + self.api.GetSearch(term = "%23" + hashtag, max_id = max_ID, count = num % 100)
+        else:
+            tweets = self.api.GetSearch(term = "%23" + hashtag, count = num)
+
+        results = [results.text for results in tweets]
         
         # Append top word list if hashtag already created
         if hashtag in self.words:
